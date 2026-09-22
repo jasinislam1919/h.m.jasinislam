@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H.M. Jasin Islam | The Cybernetic Story</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Inter:wght@300;400;600&family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- GSAP & Three.js Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #030305;
+            --primary: #00ffcc;
+            --secondary: #7b2cbf;
+            --text-main: #f8f9fa;
+            --text-dim: #8b949e;
+            --glass-bg: rgba(10, 10, 15, 0.4);
+            --glass-border: rgba(0, 255, 204, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Cinematic Noise Overlay */
+        #noise {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 9999; opacity: 0.04;
+            background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+        }
+
+        /* 3D WebGL Canvas */
+        #webgl-container {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Scroll Progress Line */
+        .progress-line {
+            position: fixed;
+            left: 50px; top: 0; width: 2px; height: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+        .progress-line-fill {
+            width: 100%; height: 0%;
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            box-shadow: 0 0 15px var(--primary);
+        }
+
+        /* Container & Sections */
+        .story-wrapper {
+            position: relative;
+            z-index: 10;
+        }
+
+        section {
+            min-height: 100vh;
+            padding: 100px 10vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Typography */
+        h1, h2, h3 { font-family: 'Syncopate', sans-serif; text-transform: uppercase; }
+        
+        .split-text span {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(50px);
+        }
+
+        /* Hero Section */
+        .hero { height: 120vh; justify-content: center; align-items: flex-start; }
+        .hero-title { font-size: 5vw; font-weight: 700; line-height: 1.1; margin-bottom: 30px; }
+        .hero-title .highlight { color: transparent; -webkit-text-stroke: 1px var(--primary); }
+        .hero-subtitle { font-family: 'Fira Code', monospace; font-size: 1.2vw; color: var(--primary); letter-spacing: 2px; margin-bottom: 20px; }
+        
+        .data-block {
+            background: rgba(0, 255, 204, 0.05);
+            border-left: 3px solid var(--primary);
+            padding: 20px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            max-width: 500px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Horizontal Scroll Section (Projects) */
+        .horizontal-container {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            width: 400vw; /* 4 panels */
+            padding: 0;
+            flex-direction: row;
+        }
+        
+        .panel {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10vw;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 60px;
+            width: 100%;
+            max-width: 900px;
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .panel-number {
+            font-family: 'Syncopate', sans-serif;
+            font-size: 8rem;
+            font-weight: 700;
+            color: transparent;
+            -webkit-text-stroke: 2px rgba(255, 255, 255, 0.1);
+            position: absolute;
+            top: -40px; right: 20px;
+            z-index: -1;
+        }
+
+        .panel-content h2 { font-size: 2.5rem; margin-bottom: 20px; color: #fff; }
+        .panel-content p { font-size: 1.1rem; line-height: 1.8; color: var(--text-dim); margin-bottom: 20px; }
+        
+        .tech-stack { display: flex; gap: 15px; flex-wrap: wrap; }
+        .tech-pill {
+            padding: 8px 16px;
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            color: var(--primary);
+            background: rgba(0, 255, 204, 0.05);
+        }
+
+        /* Vertical Story Nodes */
+        .story-node {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+            margin-bottom: 150px;
+        }
+        
+        .story-node:nth-child(even) { direction: rtl; }
+        .story-node:nth-child(even) > * { direction: ltr; }
+
+        .node-visual {
+            height: 400px;
+            border-radius: 20px;
+            background: radial-gradient(circle at center, rgba(123, 44, 191, 0.2) 0%, transparent 70%);
+            border: 1px solid rgba(123, 44, 191, 0.3);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .node-visual i { font-size: 8rem; color: var(--secondary); opacity: 0.5; filter: drop-shadow(0 0 20px var(--secondary)); }
+
+        .node-text h3 { font-size: 2rem; margin-bottom: 15px; background: linear-gradient(90deg, #fff, var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .node-text p { font-size: 1.1rem; color: var(--text-dim); line-height: 1.7; }
+
+        /* The Creative Void (Dark Vibe Section) */
+        .creative-void {
+            background: linear-gradient(to bottom, transparent, #020202);
+            text-align: center;
+            padding: 150px 10vw;
+        }
+
+        .creative-void h2 { font-size: 4vw; margin-bottom: 30px; letter-spacing: -2px; }
+        .creative-void .quote {
+            font-size: 1.5rem;
+            font-style: italic;
+            color: #d1d5db;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.8;
+            border-left: 4px solid var(--primary);
+            padding-left: 30px;
+            text-align: left;
+        }
+
+        /* Footer Terminal */
+        .footer-terminal {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .terminal-box {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(5, 5, 10, 0.8);
+            border: 1px solid #333;
+            border-radius: 10px;
+            font-family: 'Fira Code', monospace;
+            padding: 40px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+        }
+
+        .terminal-box p { color: #00ff00; line-height: 1.8; margin-bottom: 10px; }
+        .terminal-box .cursor { display: inline-block; width: 10px; height: 18px; background: #00ff00; animation: blink 1s step-end infinite; }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+    </style>
+</head>
+<body>
+
+    <!-- Cinematic Overlays -->
+    <div id="noise"></div>
+    <div id="webgl-container"></div>
+    
+    <div class="progress-line"><div class="progress-line-fill" id="scroll-progress"></div></div>
+
+    <div class="story-wrapper">
+        
+        <!-- CHAPTER 0: THE AWAKENING -->
+        <section class="hero" id="hero">
+            <div class="hero-subtitle split-text">> INITIATING SYSTEM_ARCHITECT.EXE</div>
+            <h1 class="hero-title split-text">
+                H.M. Jasin Islam <br>
+                <span class="highlight">Build In Silence.</span>
+            </h1>
+            <div class="data-block split-text">
+                [LOC] Dhaka, BD <br>
+                [AGE] 16 <br>
+                [STATUS] Architecting Logic, Hardware & AI.<br>
+                [EDU] Adamjee Cantonment Public School<br>
+                "Talk is cheap. Execution is everything."
+            </div>
+        </section>
+
+        <!-- CHAPTER 1: THE HORIZONTAL TIMELINE (PROJECTS) -->
+        <div id="horizontal-scroll-wrapper" style="overflow: hidden;">
+            <div class="horizontal-container" id="horizontal-container">
+                
+                <div class="panel">
+                    <div class="glass-panel">
+                        <div class="panel-number">01</div>
+                        <div class="panel-content">
+                            <h2>Olympiad Mindset</h2>
+                            <p>Competitive logic isn't just a hobby; it's a structural approach to problem-solving. From securing top divisional ranks in the Math Olympiad to cracking algorithmic inefficiencies at the National High School Programming Contest (NHSPC). Logic is absolute.</p>
+                            <div class="tech-stack">
+                                <span class="tech-pill">Graph Theory</span>
+                                <span class="tech-pill">Dynamic Programming</span>
+                                <span class="tech-pill">Combinatorics</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="glass-panel">
+                        <div class="panel-number">02</div>
+                        <div class="panel-content">
+                            <h2>AI & Automation</h2>
+                            <p>Deploying intelligent systems to replace manual noise. Developed a multi-agent orchestration pipeline integrating local LLMs like OpenClaw and DeepSeek. Founded 'Easy Booster' and automated client interactions for local businesses using robust AI workflows.</p>
+                            <div class="tech-stack">
+                                <span class="tech-pill">OpenClaw Agents</span>
+                                <span class="tech-pill">Python Bots</span>
+                                <span class="tech-pill">API Webhooks</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="glass-panel">
+                        <div class="panel-number">03</div>
+                        <div class="panel-content">
+                            <h2>Hardware Symbiosis</h2>
+                            <p>Software is a ghost until it touches hardware. Built custom micro-robots utilizing ESP32, ESP8266 NodeMCU, and Raspberry Pi 3 B+. Programmed autonomous line followers with ultrasonic evasion and real-time WebSocket telemetry dashboards.</p>
+                            <div class="tech-stack">
+                                <span class="tech-pill">ESP32 & C++</span>
+                                <span class="tech-pill">Raspberry Pi</span>
+                                <span class="tech-pill">PID Control</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="glass-panel">
+                        <div class="panel-number">04</div>
+                        <div class="panel-content">
+                            <h2>System Architecture</h2>
+                            <p>Engineered high-concurrency platforms including PyTelegram Enterprise Bots with automated database backups, an Emergency Helpline Directory for BD, and custom Python vulnerability scanners analyzing server access logs.</p>
+                            <div class="tech-stack">
+                                <span class="tech-pill">Full-Stack Web</span>
+                                <span class="tech-pill">Cybersecurity</span>
+                                <span class="tech-pill">Database Arch</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- CHAPTER 2: VERTICAL DESCENT (THE VIBE & CREATIVITY) -->
+        <section class="vertical-story" style="padding-top: 200px;">
+            
+            <div class="story-node">
+                <div class="node-visual gs-reveal">
+                    <i class="fa-solid fa-pen-nib"></i>
+                </div>
+                <div class="node-text gs-reveal">
+                    <h3>The Creative Void</h3>
+                    <p>Beyond logic lies narrative. Authoring "Whisper of the Dark"—a supernatural mystery exploring the unseen. Drawing inspiration from deep lore in Naruto, Jujutsu Kaisen, and Berserk. Creation isn't limited to code; it extends to crafting worlds.</p>
+                </div>
+            </div>
+
+            <div class="story-node">
+                <div class="node-visual gs-reveal" style="background: radial-gradient(circle at center, rgba(0, 255, 204, 0.1) 0%, transparent 70%); border-color: rgba(0,255,204,0.3);">
+                    <i class="fa-solid fa-sliders" style="color: var(--primary);"></i>
+                </div>
+                <div class="node-text gs-reveal">
+                    <h3 style="background: linear-gradient(90deg, #fff, var(--primary)); -webkit-background-clip: text;">Frequency & Focus</h3>
+                    <p>Audio dictates the workflow. Calibrated a custom V-shaped studio equalizer preset—elevating sub-bass and treble for surgical clarity. Whether grinding through code or pushing ranks in eFootball and PUBG, the frequency must be perfect. Current loop: 'Bad Liar' & 'Safe and Sound'.</p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- CHAPTER 3: THE VORTEX / EPILOGUE -->
+        <section class="creative-void">
+            <h2 class="split-text">Perspective.</h2>
+            <div class="quote gs-reveal">
+                "The crisis of modern society is fundamentally a crisis of broken loyalty. We live in a world where commitment has been reduced to a temporary arrangement. But true strength lies in absolute, unyielding loyalty—first to oneself, and then to those who place their trust in us. Execute in silence. Let the system speak."
+                <br><br><span style="font-family: 'Fira Code'; font-size: 1rem; color: var(--primary);">— H.M. Jasin Islam</span>
+            </div>
+        </section>
+
+        <section class="footer-terminal">
+            <div class="terminal-box">
+                <p>> System shutdown initiated...</p>
+                <p>> Saving state: [H.M. Jasin Islam // Portfolio v3.0]</p>
+                <p>> Connection secured.</p>
+                <p>> Awaiting next input <span class="cursor"></span></p>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // --- 1. UTILITY: Text Splitter for Animation ---
+        document.querySelectorAll('.split-text').forEach(el => {
+            const text = el.innerText;
+            el.innerHTML = '';
+            text.split('').forEach(char => {
+                const span = document.createElement('span');
+                span.innerText = char === ' ' ? '\u00A0' : char;
+                el.appendChild(span);
+            });
+        });
+
+        // --- 2. THREE.JS: Warp Speed Background Engine ---
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x030305, 0.0015);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 2000);
+        camera.position.z = 1000;
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('webgl-container').appendChild(renderer.domElement);
+
+        // Particle Geometry (The Starfield/Cyber Tunnel)
+        const geometry = new THREE.BufferGeometry();
+        const particlesCount = 3000;
+        const posArray = new Float32Array(particlesCount * 3);
+        const colorsArray = new Float32Array(particlesCount * 3);
+
+        const color1 = new THREE.Color(0x00ffcc);
+        const color2 = new THREE.Color(0x7b2cbf);
+
+        for(let i = 0; i < particlesCount * 3; i+=3) {
+            posArray[i] = (Math.random() - 0.5) * 3000;
+            posArray[i+1] = (Math.random() - 0.5) * 3000;
+            posArray[i+2] = (Math.random() - 0.5) * 3000;
+
+            const mixedColor = color1.clone().lerp(color2, Math.random());
+            colorsArray[i] = mixedColor.r;
+            colorsArray[i+1] = mixedColor.g;
+            colorsArray[i+2] = mixedColor.b;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
+
+        const material = new THREE.PointsMaterial({
+            size: 3,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8,
+            sizeAttenuation: true
+        });
+
+        const particlesMesh = new THREE.Points(geometry, material);
+        scene.add(particlesMesh);
+
+        // Animation loop & Scroll interaction
+        let scrollY = window.scrollY;
+        let mouseX = 0;
+        let mouseY = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth) - 0.5;
+            mouseY = (e.clientY / window.innerHeight) - 0.5;
+        });
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            
+            // Camera moves forward through the particles based on scroll
+            particlesMesh.rotation.z += 0.001;
+            camera.position.z = 1000 - (scrollY * 0.5); 
+            
+            // Parallax mouse effect
+            camera.position.x += (mouseX * 200 - camera.position.x) * 0.05;
+            camera.position.y += (-mouseY * 200 - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+        animate3D();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 3. GSAP SCROLL STORYLINE ANIMATIONS ---
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Sync 3D Scroll Variable & Progress Line
+        window.addEventListener('scroll', () => {
+            scrollY = window.scrollY;
+            const docHeight = document.body.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollY / docHeight) * 100;
+            document.getElementById('scroll-progress').style.height = scrollPercent + '%';
+        });
+
+        // Hero Text Reveal
+        gsap.to(".hero .split-text span", {
+            y: 0,
+            opacity: 1,
+            stagger: 0.02,
+            duration: 0.8,
+            ease: "power4.out",
+            delay: 0.2
+        });
+
+        // Horizontal Scroll Hijacking (The magic part)
+        const panels = gsap.utils.toArray(".panel");
+        gsap.to(panels, {
+            xPercent: -100 * (panels.length - 1),
+            ease: "none",
+            scrollTrigger: {
+                trigger: "#horizontal-scroll-wrapper",
+                pin: true,
+                scrub: 1,
+                snap: 1 / (panels.length - 1),
+                end: () => "+=" + document.querySelector("#horizontal-container").offsetWidth
+            }
+        });
+
+        // Vertical Reveal Nodes
+        const reveals = gsap.utils.toArray(".gs-reveal");
+        reveals.forEach(element => {
+            gsap.fromTo(element, 
+                { autoAlpha: 0, y: 100, rotationX: 10 },
+                {
+                    autoAlpha: 1,
+                    y: 0,
+                    rotationX: 0,
+                    duration: 1.5,
+                    ease: "power3.out",
+                    scrollTrigger: {
+                        trigger: element,
+                        start: "top 80%",
+                        toggleActions: "play none none reverse"
+                    }
+                }
+            );
+        });
+
+    </script>
+</body>
+</html>
